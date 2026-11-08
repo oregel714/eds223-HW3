@@ -1,0 +1,67 @@
+---
+title: "EDS 223 Homework #2"
+subtitle: "Geospatial Analysis & Remote Sensing" 
+author: "Mark Oregel"
+date: 2026-10-24
+format: 
+    pdf: 
+        toc: true
+        code-fold: false
+---
+
+### Preparing Data 
+
+```{r}
+# Read in packages 
+library(tidyverse)
+library(stars)
+library(sf)
+library(here)
+library(tmap)
+library(gt)
+library(viridisLite)
+library(terra)
+library(spDataLarge)
+library(spData)
+library(geodata)
+library(kableExtra)
+```
+
+# Reading in data
+```{r}
+# Read in West Coast data 
+wc_EEZ <- sf::st_read(here::here('data/wc_regions_clean.shp'))
+
+# Read in depth raster data 
+depth <- rast('data/depth.tif')
+
+# Read in yearly annual sst tif files 
+rast_08 <- rast('data/average_annual_sst_2008.tif')
+rast_09 <- rast('data/average_annual_sst_2009.tif')
+rast_10 <- rast('data/average_annual_sst_2010.tif')
+rast_11 <- rast('data/average_annual_sst_2011.tif')
+rast_12 <- rast('data/average_annual_sst_2012.tif')
+```
+
+### Preparing Data
+
+```{r}
+# Verify CRS's match 
+if (st_crs(wc_EEZ) == st_crs(depth)){
+    print('CRS is a match :)')
+}else{
+    warning('It is not a match:()')
+}
+
+# Combine all raster SST rasters 
+rasters <- c(rast_08, rast_09, rast_10, rast_11, rast_12)
+```
+
+### Process Data 
+```{r}
+# Calculate average 
+avg_sst <- mean(rasters, na.rm=TRUE)
+
+# 
+
+```
