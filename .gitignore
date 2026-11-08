@@ -1,3 +1,16 @@
+data/wc_regions_clean.shp
+data/wc_regions_clean.dbf
+data/wc_regions_clean.prj
+data/wc_regions_clean.shx
+
+data/depth.tif
+
+data/average_annual_sst_2008.tif
+data/average_annual_sst_2009.tif
+data/average_annual_sst_2010.tif
+data/average_annual_sst_2011.tif
+data/average_annual_sst_2012.tif
+
 # History files
 .Rhistory
 .Rapp.history
