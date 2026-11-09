@@ -21,13 +21,22 @@ eds223-Oyster-and-Dungeness-Crab-Suitability
 ├── dgcrab_analysis.qmd
 └── README.md
 ```
+### Data Access: 
+Bathymetry Data accessed via GEBCO Compilation Group (2022). 
+
+SeaLifeBase website was utilized to find Dungeness Crab data. 
+
+NOAA Sea Surface Temperature accessed via NOAA Coral Reef Watch. 
+
+Exclusive Economic Zone data accessed via Marine Regions for California EEZs. 
+
 ### Authors:
 Mark Oregel
 
-### Data Access: 
+### References and Acknowledgements: 
 **Bathymetry Data:** GEBCO Compilation Group (2022) GEBCO_2022 Grid (doi:10.5285/e0f0bb80-ab44-2739-e053-6c86abc0289c).
 
-**Sealife Base:** [SeaLifeBase](https://www.sealifebase.ca/search.php). 06/2026. Accessed: November 8, 2026. 
+**SeaLifeBase:** [SeaLifeBase](https://www.sealifebase.ca/search.php). 06/2026. Accessed: November 8, 2026. 
 
 **NOAA Sea Surface Temperature:** [NOAA Coral Reef Watch](https://coralreefwatch.noaa.gov/product/5km/index_5km_ssta.php). 2019, updated daily. NOAA Coral Reef Watch Version 3.1 Daily 5km Satellite Regional Virtual Station Time Series Data for Southeast Florida, Mar. 12, 2013-Mar. 11, 2014. College Park, Maryland, USA: NOAA Coral Reef Watch. Data set accessed 2020-02-05 at https://coralreefwatch.noaa.gov/product/vs/data.php.
 
