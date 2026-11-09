@@ -1,0 +1,237 @@
+---
+title: "EDS 223 Homework #3: Oyster & Dungeness Crab Suitability Analysis"
+subtitle: "Geospatial Analysis & Remote Sensing" 
+author: "Mark Oregel"
+date: 2026-11-08
+format: 
+    pdf: 
+        toc: true
+        code-fold: false
+execute:
+    warning: false
+---
+
+### Preparing Data 
+
+```{r}
+# Read in packages 
+library(tidyverse)
+library(stars)
+library(sf)
+library(here)
+library(tmap)
+library(gt)
+library(viridisLite)
+library(terra)
+library(geodata)
+library(kableExtra)
+```
+
+# Reading in data
+```{r}
+# Read in West Coast data 
+wc_EEZ <- sf::st_read(here::here('data/wc_regions_clean.shp'))
+
+# Read in depth raster data 
+depth <- rast('data/depth.tif')
+
+# Read in yearly annual sst tif files 
+rast_08 <- rast('data/average_annual_sst_2008.tif')
+rast_09 <- rast('data/average_annual_sst_2009.tif')
+rast_10 <- rast('data/average_annual_sst_2010.tif')
+rast_11 <- rast('data/average_annual_sst_2011.tif')
+rast_12 <- rast('data/average_annual_sst_2012.tif')
+```
+
+### Preparing Data
+
+```{r}
+# Verify CRS's match 
+if (st_crs(wc_EEZ) == st_crs(depth)){
+    print('CRS is a match :)')
+}else{
+    warning('It is not a match:()')
+}
+
+# Combine all raster SST rasters 
+rasters <- c(rast_08, rast_09, rast_10, rast_11, rast_12)
+```
+
+### Process Data 
+```{r}
+# Calculate average 
+avg_sst <- mean(rasters, na.rm=TRUE)
+
+# Converting average SST from Kelvin to Celsius 
+avg_sst <- avg_sst - 273.15
+
+# Crop depth raster to match the extent of the SST raster 
+# depth_cropped <- terra::extend(depth, avg_sst)
+
+# Resample depth to match avg_sst
+depth_resampled <- terra::resample(x = depth, y = avg_sst, method = 'bilinear')
+
+# Check extent, resolution, and CRS match for both data
+if (st_crs(depth_resampled) == st_crs(avg_sst)){
+    print('The first matches the second :)')
+}else{
+    warning('The first does not match the second >:()')
+}
+# CRS matches 
+# Extent matches
+# Resolution matches
+
+# CRS matches but EPSG codes do not 
+# Reprojecting depth_resampled 
+depth_resampled <- terra::project(depth_resampled, avg_sst)
+
+# Stack matching CRS geodataframes
+depth_sst <- c(depth_resampled, avg_sst)
+```
+
+### Find suitable locations 
+
+```{r}
+# Create reclassification matrix for sea surface temp using suitable sea surface temperatures for oysters
+rcl_sst <- matrix(c(
+    11, 30, 1,
+    -Inf, 11, 0,
+    31, Inf, 0),
+    ncol = 3, 
+    byrow = TRUE
+)
+
+# Create reclasification matrix for depth using suitable conditions of depth for oysters
+rcl_depth <- matrix(c(
+    -70, 0, 1,
+    -Inf, -70, 0, 
+    0, Inf, 0), 
+    ncol = 3, 
+    byrow = TRUE
+)
+
+# Reclassification of SST and depth 
+reclassified_sst <- classify(avg_sst, rcl = rcl_sst)
+reclassified_depth <- classify(depth_resampled, rcl = rcl_depth)
+
+```
+
+### Finding locations that satisfy both SST and depth conditions 
+```{r}
+oyster_algebra <- lapp(c(reclassified_depth, reclassified_sst), function(a, b) a*b)
+
+```
+
+### Determine the most suitable EEZ 
+```{r}
+# Rasterize stacked raster for reclassified depth and SST 
+wc_raster <- as.factor(rasterize(wc_EEZ, oyster_algebra, field = 'rgn_id'))
+
+# Calculate cell area from wc_raster
+area <- cellSize(wc_raster, unit ='km')
+
+# Calculate total suitable area per zone 
+suitable_area <- lapp(c(area, oyster_algebra), function(a,b) a*b)
+
+# Create suitablity areas for oyster 
+wc_suitability <- zonal(suitable_area, wc_raster, fun = sum, na.rm = TRUE, as.raster = TRUE)
+
+```
+
+### Mapping
+```{r}
+# Create map for oyster suitability
+tm_basemap('OpenStreetMap') + 
+    tm_shape(wc_suitability) + 
+        tm_raster(
+            col.legend = tm_legend('Suitability Area (km^2)',
+                                    position = tm_pos_out('right', 'center'))
+    ) + 
+    tm_shape(wc_EEZ) + 
+        tm_borders(col = 'black',
+                    lwd = 0.6,
+                    lty = 'solid') + 
+    tm_title('Oyster Suitability Analysis by Exclusive Economic Zone') + 
+    tm_compass(position = c('left', 'bottom')) + 
+    tm_scalebar(position = c('center', 'bottom'))
+
+```
+The map produced suggests that the central/southern Californian coast is the most suitable for aquaculture operations based on the optimal growing conditions for oysters. 
+
+
+### Creating a function for most suitable Exclusive Economic Zones by species of interest 
+
+```{r}
+# Call function 'suitability_eez' 
+suitability_eez <- function(tmin = 11, tmax = 30, dmin = -70, dmax = 0, species = 'Oyster'){
+
+# Create reclassification matrix for sea surface temp using suitable sea surface temperatures for oysters
+rcl_sst <- matrix(c(
+    tmin, tmax, 1,
+    -Inf, tmin, 0,
+    tmax, Inf, 0),
+    ncol = 3, 
+    byrow = TRUE
+)
+
+# Create reclasification matrix for depth using suitable conditions of depth for oysters
+rcl_depth <- matrix(c(
+    dmin, dmax, 1,
+    -Inf, dmin, 0, 
+    dmax, Inf, 0), 
+    ncol = 3, 
+    byrow = TRUE
+)
+
+# Reclassification of SST and depth 
+reclassified_sst <- classify(avg_sst, rcl = rcl_sst)
+reclassified_depth <- classify(depth_resampled, rcl = rcl_depth)
+
+# Verify that reclassified rasters' CRS match
+if (st_crs(reclassified_sst) == st_crs(reclassified_depth)){
+    print("CRS for both reclassified layers match.")
+}else{
+    stop("CRS does not match for both reclassified layers!")
+}
+
+# Multiply the raster cell values using lapp() to find locations that satisfy both SST and depth conditions
+oyster_algebra <- lapp(c(reclassified_depth, reclassified_sst), function(a, b) a*b)
+
+# Rasterize stacked raster for reclassified depth and SST 
+wc_raster <- as.factor(rasterize(wc_EEZ, oyster_algebra, field = 'rgn_id'))
+
+# Calculate cell area from wc_raster
+area <- cellSize(wc_raster, unit ='km')
+
+# Calculate total suitable area per zone 
+suitable_area <- lapp(c(area, oyster_algebra), function(a,b) a*b)
+
+# Create suitablity areas for oyster 
+wc_suitability <- zonal(suitable_area, wc_raster, fun = sum, na.rm = TRUE, as.raster = TRUE)
+names(wc_suitability) <- 'Suitable Area (km^2)'
+
+# Creating the map 
+tm_basemap('OpenStreetMap') + 
+    tm_shape(wc_suitability) + 
+        tm_raster(
+            col.legend = tm_legend('Suitability Area (km^2)',
+                                    position = tm_pos_out('right', 'center'))
+    ) + 
+    tm_shape(wc_EEZ) + 
+        tm_borders(col = 'black',
+                    lwd = 0.6,
+                    lty = 'solid') + 
+    tm_title(paste0(species, ' Suitability Analysis by Exclusive Economic Zone')) + 
+    tm_compass(position = c('left', 'bottom')) + 
+    tm_scalebar(position = c('center', 'bottom'))
+}
+```
+
+### Using the function for The Dungeness Crab (Metacarcinus magister)
+```{r}
+
+# Calling function for dungeness crab 
+suitability_eez(tmin = 3, tmax = 19, dmin = -360, dmax = 0, species = "Dungeness Crab")
+```
+
+We can use the function to map the Dungeness Crab suitability analysis by Exclusive Economic Zone. The dungeness crab has a growth surface temperature range of 3 - 19 degrees Celsius and a depth range of 360 to 0 feet below sea level. The map suggests that the Exclusive Economic Zone on the coast of Oregon would be the most suitable. 
