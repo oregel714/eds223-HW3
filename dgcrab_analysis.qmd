@@ -156,6 +156,7 @@ tm_basemap('OpenStreetMap') +
     tm_scalebar(position = c('center', 'bottom'))
 
 ```
+
 The map produced suggests that the central/southern Californian coast is the most suitable for aquaculture operations based on the optimal growing conditions for oysters. 
 
 
